@@ -4,3 +4,23 @@
 *.log
 .vscode/
 .idea/
+
+# CMake generated files
+/CMakeFiles/
+/CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Executable files
+NeuroNet
+NeuroNet.exe
+
+# Eigen library 
+eigen-3.4.0/
+
+/c_cpp_properties.json
+
+# Temporary files
+*~
+
+/data/
