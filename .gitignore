@@ -4,6 +4,8 @@
 *.log
 .vscode/
 .idea/
+.DS_Store
+/data/
 
 # CMake generated files
 /CMakeFiles/
@@ -22,5 +24,3 @@ eigen-3.4.0/
 
 # Temporary files
 *~
-
-/data/
