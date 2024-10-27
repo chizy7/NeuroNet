@@ -5,6 +5,7 @@
 class Optimizer {
 public:
     virtual void update(const std::vector<Layer*>& layers) = 0;
+    virtual ~Optimizer() = default;  // Add virtual destructor
 };
 
 class SGD : public Optimizer {
