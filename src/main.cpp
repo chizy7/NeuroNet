@@ -7,7 +7,7 @@
 #include "Logger.h"
 #include <Eigen/Dense>
 
-bool debug = false; // Set to true to enable detailed output
+bool debug = false; // debug flag
 
 int main() {
     Logger::info("Initializing Neural Network");

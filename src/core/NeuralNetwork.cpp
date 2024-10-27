@@ -6,6 +6,16 @@
 
 NeuralNetwork::NeuralNetwork() : optimizer(nullptr), loss_function(nullptr) {}
 
+NeuralNetwork::~NeuralNetwork() {
+    // Free dynamically allocated layers
+    for (Layer* layer : layers) {
+        delete layer;
+    }
+    // Free dynamically allocated optimizer and loss function if they exist
+    delete optimizer;
+    delete loss_function;
+}
+
 void NeuralNetwork::add_layer(Layer* layer) {
     layers.push_back(layer);
 }
@@ -48,20 +58,16 @@ void NeuralNetwork::train(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y, in
             Eigen::MatrixXd X_batch = X.middleRows(i, end - i);
             Eigen::MatrixXd Y_batch = Eigen::MatrixXd::Zero(end - i, 10);
 
-            // Convert labels to one-hot encoding for the batch
             for (int j = 0; j < end - i; ++j) {
                 Y_batch(j, Y(i + j)) = 1;
             }
 
-            // Forward pass and compute loss
             Eigen::MatrixXd output = forward(X_batch);
             total_loss += loss_function->calculate(output, Y_batch);
 
-            // Backward pass and weights update
             backward(output, Y_batch);
         }
 
-        // Print average loss for the epoch
         if (debug) {
             std::cout << "Epoch " << epoch + 1 << " completed. Average Loss: " << total_loss / (num_samples / batch_size) << std::endl;
         }
@@ -76,7 +82,7 @@ double NeuralNetwork::evaluate(const Eigen::MatrixXd& X, const Eigen::VectorXi& 
 
     for (int i = 0; i < num_samples; ++i) {
         int predicted_class;
-        output.row(i).maxCoeff(&predicted_class);  // Get the index of the max element in the row
+        output.row(i).maxCoeff(&predicted_class);
         if (predicted_class == Y(i)) {
             correct++;
         }

@@ -8,6 +8,7 @@
 class NeuralNetwork {
 public:
     NeuralNetwork();
+    ~NeuralNetwork();  // Destructor for cleanup
 
     void add_layer(Layer* layer);
     Eigen::MatrixXd forward(const Eigen::MatrixXd& input);

@@ -3,6 +3,7 @@
 
 class Layer {
 public:
+    virtual ~Layer() = default;  // Virtual destructor for safe polymorphic use
     virtual Eigen::MatrixXd forward(const Eigen::MatrixXd& input) = 0;
     virtual Eigen::MatrixXd backward(const Eigen::MatrixXd& grad_output) = 0;
     virtual void update_weights(double learning_rate) = 0;
@@ -18,8 +19,8 @@ public:
 
 private:
     Eigen::MatrixXd weights;
-    Eigen::MatrixXd bias;
+    Eigen::VectorXd bias;            // Declared as a vector for better bias handling
     Eigen::MatrixXd input_cache;
     Eigen::MatrixXd grad_weights;
-    Eigen::MatrixXd grad_bias;
+    Eigen::VectorXd grad_bias;
 };

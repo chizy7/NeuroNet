@@ -48,7 +48,7 @@ void DataLoader::load_mnist_csv(const std::string& file_path, Eigen::MatrixXd& d
         // Read the pixel values
         while (std::getline(ss, value, ',')) {
             try {
-                row.push_back(std::stod(value) / 255.0);  // Normalize to [0, 1]
+                row.push_back(std::stod(value) / 255.0);  // Normalize to [0, 1] for improved model performance
             } catch (const std::invalid_argument& e) {
                 std::cerr << "Error: invalid pixel value '" << value << "' in line: " << line << std::endl;
                 row.clear();  // Clear the row to avoid incomplete entries

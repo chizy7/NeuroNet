@@ -3,6 +3,7 @@
 
 class Loss {
 public:
+    virtual ~Loss() = default;  // Virtual destructor for safe polymorphic use
     virtual double calculate(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) = 0;
     virtual Eigen::MatrixXd gradient(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) = 0;
 };
