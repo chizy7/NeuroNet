@@ -1,10 +1,10 @@
 #include "Loss.h"
 #include <iostream>
 
-double MSE::calculate(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) {
-    return (Y_pred - Y_true).array().square().mean();
+double CrossEntropyLoss::calculate(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) {
+    return -(Y_true.array() * Y_pred.array().log()).sum() / Y_true.rows();
 }
 
-Eigen::MatrixXd MSE::gradient(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) {
-    return 2 * (Y_pred - Y_true) / Y_true.rows();
+Eigen::MatrixXd CrossEntropyLoss::gradient(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) {
+    return -Y_true.array() / Y_pred.array();
 }
