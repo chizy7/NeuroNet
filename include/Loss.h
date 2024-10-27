@@ -7,7 +7,7 @@ public:
     virtual Eigen::MatrixXd gradient(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) = 0;
 };
 
-class MSE : public Loss {
+class CrossEntropyLoss : public Loss {
 public:
     double calculate(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) override;
     Eigen::MatrixXd gradient(const Eigen::MatrixXd& Y_pred, const Eigen::MatrixXd& Y_true) override;

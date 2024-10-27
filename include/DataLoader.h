@@ -4,5 +4,5 @@
 
 class DataLoader {
 public:
-    static Eigen::MatrixXd load_csv(const std::string& file_path);
+    static void load_mnist_csv(const std::string& file_path, Eigen::MatrixXd& data, Eigen::VectorXi& labels);
 };
