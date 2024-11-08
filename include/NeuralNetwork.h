@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <memory> 
 #include <Eigen/Dense>
 #include "Layer.h"
 #include "Optimizer.h"
@@ -21,8 +22,16 @@ public:
     // Evaluate the model accuracy on test data
     double evaluate(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y);
 
+    // Model saving and loading
+    void save_model(const std::string& file_path);
+    void load_model(const std::string& file_path);
+
+    // Loss history tracking
+    void save_loss_history(const std::string& file_path);
+
 private:
-    std::vector<Layer*> layers;
-    Optimizer* optimizer;
-    Loss* loss_function;
+    std::vector<std::unique_ptr<Layer>> layers;  // Use smart pointers
+    std::unique_ptr<Optimizer> optimizer;
+    std::unique_ptr<Loss> loss_function;
+    std::vector<double> loss_history;  // Track loss across epochs
 };

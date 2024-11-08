@@ -24,3 +24,8 @@ eigen-3.4.0/
 
 # Temporary files
 *~
+
+# Exclude models directory
+/models/
+
+/training_loss.csv

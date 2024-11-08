@@ -1,16 +1,56 @@
 #include "Optimizer.h"
-#include "Logger.h"
 #include <iostream>
 
 SGD::SGD(double lr) : learning_rate(lr) {}
 
-void SGD::update(const std::vector<Layer*>& layers) {
-    for (Layer* layer : layers) {
-        layer->update_weights(learning_rate);
-        
-        // Optional debug statement to log after each layer update
-        if (debug) {
-            std::cout << "[DEBUG]: Updated weights for layer with learning rate: " << learning_rate << std::endl;
+void SGD::update(const std::vector<std::unique_ptr<Layer>>& layers) {
+    for (const auto& layer : layers) {
+        // Update weights with the learning rate
+        layer->update_weights(learning_rate * Eigen::MatrixXd::Ones(layer->get_grad_weights().rows(), layer->get_grad_weights().cols()), 
+                              learning_rate * Eigen::VectorXd::Ones(layer->get_grad_bias().size()));
+    }
+}
+
+Adam::Adam(double lr, double b1, double b2, double eps)
+    : learning_rate(lr), beta1(b1), beta2(b2), epsilon(eps), t(0) {}
+
+void Adam::update(const std::vector<std::unique_ptr<Layer>>& layers) {
+    t += 1;
+
+    if (m.empty()) {
+        m.resize(layers.size());
+        v.resize(layers.size());
+    }
+
+    for (size_t i = 0; i < layers.size(); ++i) {
+        const auto& layer = layers[i];
+
+        Eigen::MatrixXd grad_weights = layer->get_grad_weights();
+        Eigen::VectorXd grad_bias = layer->get_grad_bias();
+
+        // Initialize moment matrices if not already done
+        if (m[i].size() == 0) {
+            m[i] = Eigen::MatrixXd::Zero(grad_weights.rows(), grad_weights.cols());
+            v[i] = Eigen::MatrixXd::Zero(grad_weights.rows(), grad_weights.cols());
         }
+
+        // Update biased first moment estimate
+        m[i] = beta1 * m[i] + (1 - beta1) * grad_weights;
+
+        // Update biased second raw moment estimate
+        v[i] = beta2 * v[i] + (1 - beta2) * grad_weights.cwiseProduct(grad_weights);
+
+        // Correct bias in first moment
+        Eigen::MatrixXd m_hat = m[i] / (1 - std::pow(beta1, t));
+
+        // Correct bias in second moment
+        Eigen::MatrixXd v_hat = v[i] / (1 - std::pow(beta2, t));
+
+        // // Compute weight and bias updates
+        Eigen::MatrixXd weight_update = learning_rate * m_hat.array().cwiseQuotient(v_hat.array().sqrt() + epsilon).matrix();
+        Eigen::VectorXd bias_update = learning_rate * grad_bias;
+
+        // Apply updates to weights and biases
+        layer->update_weights(weight_update, bias_update);
     }
 }
