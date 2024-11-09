@@ -1,54 +1,58 @@
 #include "Layer.h"
-#include "Logger.h"
 #include <iostream>
 
-DenseLayer::DenseLayer(int input_size, int output_size) {
+DenseLayer::DenseLayer(int input_size, int output_size, double l2_lambda)
+    : l2_lambda(l2_lambda) {
     weights = Eigen::MatrixXd::Random(output_size, input_size);
-    bias = Eigen::VectorXd::Random(output_size); // Use Eigen::VectorXd for bias
+    bias = Eigen::VectorXd::Random(output_size);
 }
 
 Eigen::MatrixXd DenseLayer::forward(const Eigen::MatrixXd& input) {
-    if (debug) {
-        std::cout << "[DenseLayer Forward] Input size: " << input.rows() << "x" << input.cols() << std::endl;
-        std::cout << "[DenseLayer Forward] Weights size: " << weights.rows() << "x" << weights.cols() << std::endl;
-        std::cout << "[DenseLayer Forward] Bias size: " << bias.size() << "x1" << std::endl;
-    }
-
     input_cache = input;
     Eigen::MatrixXd output = input * weights.transpose();
-
-    // Add bias vector to each row of output
     output.rowwise() += bias.transpose();
-
-    if (debug) {
-        std::cout << "[DenseLayer Forward] Output size: " << output.rows() << "x" << output.cols() << std::endl;
-    }
-
     return output;
 }
 
 Eigen::MatrixXd DenseLayer::backward(const Eigen::MatrixXd& grad_output) {
-    if (grad_output.cols() != weights.rows()) {
-        Logger::error("Backward pass dimension mismatch: grad_output.cols() = " + std::to_string(grad_output.cols()) +
-                      ", weights.rows() = " + std::to_string(weights.rows()));
-        exit(1);
-    }
-
     grad_weights = grad_output.transpose() * input_cache;
     grad_bias = grad_output.colwise().sum();
-
-    Eigen::MatrixXd grad_input = grad_output * weights;
-
-    if (debug) {
-        std::cout << "[DenseLayer Backward] grad_weights size: " << grad_weights.rows() << "x" << grad_weights.cols() << std::endl;
-        std::cout << "[DenseLayer Backward] grad_bias size: " << grad_bias.size() << "x1" << std::endl;
-        std::cout << "[DenseLayer Backward] grad_input size: " << grad_input.rows() << "x" << grad_input.cols() << std::endl;
-    }
-
-    return grad_input;
+    return grad_output * weights;
 }
 
-void DenseLayer::update_weights(double learning_rate) {
-    weights -= learning_rate * grad_weights;
-    bias -= learning_rate * grad_bias;
+double DenseLayer::get_regularization_loss() const {
+    return l2_lambda * weights.squaredNorm();
+}
+
+void DenseLayer::update_weights(const Eigen::MatrixXd& grad_weights_update, const Eigen::VectorXd& grad_bias_update) {
+    weights -= grad_weights_update + l2_lambda * weights;
+    bias -= grad_bias_update;
+}
+
+void DenseLayer::save(std::ofstream& out) const {
+    if (out.is_open()) {
+        int rows = weights.rows(), cols = weights.cols();
+        out.write(reinterpret_cast<const char*>(&rows), sizeof(rows));
+        out.write(reinterpret_cast<const char*>(&cols), sizeof(cols));
+        out.write(reinterpret_cast<const char*>(weights.data()), sizeof(double) * rows * cols);
+
+        int bias_size = bias.size();
+        out.write(reinterpret_cast<const char*>(&bias_size), sizeof(bias_size));
+        out.write(reinterpret_cast<const char*>(bias.data()), sizeof(double) * bias_size);
+    }
+}
+
+void DenseLayer::load(std::ifstream& in) {
+    if (in.is_open()) {
+        int rows, cols;
+        in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+        in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+        weights.resize(rows, cols);
+        in.read(reinterpret_cast<char*>(weights.data()), sizeof(double) * rows * cols);
+
+        int bias_size;
+        in.read(reinterpret_cast<char*>(&bias_size), sizeof(bias_size));
+        bias.resize(bias_size);
+        in.read(reinterpret_cast<char*>(bias.data()), sizeof(double) * bias_size);
+    }
 }

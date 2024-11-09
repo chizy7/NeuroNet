@@ -3,26 +3,27 @@
 #include <iostream>
 #include <algorithm>
 #include <numeric>
+#include <fstream>
+#include <thread>
 
 NeuralNetwork::NeuralNetwork() : optimizer(nullptr), loss_function(nullptr) {}
 
 NeuralNetwork::~NeuralNetwork() {
-    // Free dynamically allocated layers
-    for (Layer* layer : layers) {
-        delete layer;
-    }
-    // Free dynamically allocated optimizer and loss function if they exist
-    delete optimizer;
-    delete loss_function;
+    // Smart pointers automatically handle memory deallocation, so no manual deletes are needed
+    layers.clear();
+    optimizer.reset();
+    loss_function.reset();
 }
 
 void NeuralNetwork::add_layer(Layer* layer) {
-    layers.push_back(layer);
+    layers.emplace_back(std::unique_ptr<Layer>(layer)); 
 }
 
 Eigen::MatrixXd NeuralNetwork::forward(const Eigen::MatrixXd& input) {
     Eigen::MatrixXd output = input;
-    for (Layer* layer : layers) {
+
+    // Sequential forward pass
+    for (const auto& layer : layers) {
         if (debug) {
             std::cout << "Input to layer: " << output.rows() << "x" << output.cols() << std::endl;
         }
@@ -36,15 +37,19 @@ Eigen::MatrixXd NeuralNetwork::forward(const Eigen::MatrixXd& input) {
 
 void NeuralNetwork::backward(const Eigen::MatrixXd& output, const Eigen::MatrixXd& labels) {
     Eigen::MatrixXd grad_loss = loss_function->gradient(output, labels);
+
+    // Reverse order for backpropagation
     for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
         grad_loss = (*it)->backward(grad_loss);
     }
-    optimizer->update(layers);
+
+    // Update weights using the optimizer
+    optimizer->update(layers);  // Pass unique_ptr vector
 }
 
 void NeuralNetwork::compile(Optimizer* opt, Loss* loss_fn) {
-    this->optimizer = opt;
-    this->loss_function = loss_fn;
+    optimizer.reset(opt);  // Transfer ownership to unique_ptr
+    loss_function.reset(loss_fn);  // Transfer ownership to unique_ptr
 }
 
 void NeuralNetwork::train(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y, int epochs, int batch_size) {
@@ -64,13 +69,67 @@ void NeuralNetwork::train(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y, in
 
             Eigen::MatrixXd output = forward(X_batch);
             total_loss += loss_function->calculate(output, Y_batch);
-
             backward(output, Y_batch);
         }
 
+        double avg_loss = total_loss / (num_samples / batch_size);
+        loss_history.push_back(avg_loss);  // Track average loss for the epoch
+
         if (debug) {
-            std::cout << "Epoch " << epoch + 1 << " completed. Average Loss: " << total_loss / (num_samples / batch_size) << std::endl;
+            std::cout << "Epoch " << epoch + 1 << " completed. Average Loss: " << avg_loss << std::endl;
         }
+    }
+}
+
+void NeuralNetwork::save_model(const std::string& file_path) {
+    // Ensure the directory exists before saving
+    std::filesystem::path directory = std::filesystem::path(file_path).parent_path();
+    if (!directory.empty() && !std::filesystem::exists(directory)) {
+        std::filesystem::create_directories(directory);
+    }
+
+    // Open the file and save the model
+    std::ofstream file(file_path, std::ios::binary);
+    if (file.is_open()) {
+        for (const auto& layer : layers) { // Use const auto& to access the unique_ptr
+            layer->save(file); // Dereference the unique_ptr to access the Layer
+        }
+        file.close();
+        std::cout << "Model saved to " << file_path << std::endl;
+    } else {
+        std::cerr << "Failed to open file for saving." << std::endl;
+    }
+}
+
+void NeuralNetwork::load_model(const std::string& file_path) {
+    // Ensure the file exists before attempting to load
+    if (!std::filesystem::exists(file_path)) {
+        std::cerr << "Model file does not exist: " << file_path << std::endl;
+        return; // Early exit if the file does not exist
+    }
+
+    std::ifstream file(file_path, std::ios::binary);
+    if (file.is_open()) {
+        for (auto& layer : layers) { // Use auto& for unique_ptr compatibility
+            layer->load(file); // Call the load method for each layer
+        }
+        file.close();
+        std::cout << "Model loaded from " << file_path << std::endl;
+    } else {
+        std::cerr << "Failed to open model file for loading: " << file_path << std::endl;
+    }
+}
+
+void NeuralNetwork::save_loss_history(const std::string& file_path) {
+    std::ofstream file(file_path);
+    if (file.is_open()) {
+        for (double loss : loss_history) {
+            file << loss << "\n";
+        }
+        file.close();
+        std::cout << "Loss history saved to " << file_path << std::endl;
+    } else {
+        std::cerr << "Failed to open file for saving loss history." << std::endl;
     }
 }
 
