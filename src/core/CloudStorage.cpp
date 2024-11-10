@@ -8,7 +8,6 @@
 #include <cstdlib>
 
 bool CloudStorage::upload_to_s3(const std::string& local_file, const std::string& s3_path) {
-    // Get bucket name from environment variable
     const char* bucket_name = std::getenv("AWS_BUCKET_NAME");
     if (!bucket_name) {
         std::cerr << "Error: AWS_BUCKET_NAME environment variable not set" << std::endl;

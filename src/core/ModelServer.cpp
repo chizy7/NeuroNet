@@ -3,9 +3,6 @@
 #include <cpprest/http_listener.h>
 #include <cpprest/json.h>
 
-// #include <thread>
-// #include <chrono>
-
 using namespace web;
 using namespace http;
 using namespace utility;
@@ -17,8 +14,6 @@ ModelServer::ModelServer(const std::string& model_path) {
 
 void ModelServer::start_server(int port) {
     http_listener listener(U("http://localhost:" + std::to_string(port)));
-    // http_listener listener(U("http://localhost:" + std::to_string(port) + "/predict"));
-    // http_listener listener(U("http://0.0.0.0:" + std::to_string(port)));
 
     listener.support(methods::POST, [this](http_request request) {
         std::cout << "Received a request..." << std::endl;
@@ -46,15 +41,6 @@ void ModelServer::start_server(int port) {
     } catch (const std::exception& e) {
         std::cerr << "Failed to start the server: " << e.what() << std::endl;
     }
-    // listener.open().wait();
-    // std::cout << "Model server running on port " << port << std::endl;
-
-    // std::cout << "Press Ctrl+C to exit..." << std::endl;
-
-    // // Keep the server alive
-    // while (true) {
-    //     std::this_thread::sleep_for(std::chrono::hours(24));  // Keep the thread alive indefinitely
-    // }
 }
 
 Eigen::MatrixXd ModelServer::predict(const Eigen::MatrixXd& input) {

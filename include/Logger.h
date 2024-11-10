@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-extern bool debug; // Declare debug as extern to avoid multiple definitions
+extern bool debug; 
 
 class Logger {
 public:

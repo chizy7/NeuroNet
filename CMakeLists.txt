@@ -20,6 +20,10 @@ if(APPLE)
     set(CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
 endif()
 
+# Include OpenCV
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 # Include directories
 include_directories(include)
 include_directories(third_party/eigen-3.4.0)
@@ -46,4 +50,5 @@ target_link_libraries(NeuroNet
     ${MPI_LIBRARIES}
     cpprestsdk::cpprest
     ${AWSSDK_LINK_LIBRARIES}
+    ${OpenCV_LIBS}
 )
