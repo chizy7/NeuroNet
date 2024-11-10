@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include "NeuralNetwork.h"
 #include "Logger.h"
 #include <iostream>
@@ -31,6 +32,18 @@ Eigen::MatrixXd NeuralNetwork::forward(const Eigen::MatrixXd& input) {
         if (debug) {
             std::cout << "Output of layer: " << output.rows() << "x" << output.cols() << std::endl;
         }
+    }
+    return output;
+}
+
+void NeuralNetwork::add_dynamic_layer(Layer* layer) {
+    dynamic_layers.push_back(layer);
+}
+
+Eigen::MatrixXd NeuralNetwork::forward_dynamic(const Eigen::MatrixXd& input) {
+    Eigen::MatrixXd output = input;
+    for (Layer* layer : dynamic_layers) {
+        output = layer->forward(output);
     }
     return output;
 }
@@ -129,7 +142,43 @@ void NeuralNetwork::save_loss_history(const std::string& file_path) {
         file.close();
         std::cout << "Loss history saved to " << file_path << std::endl;
     } else {
-        std::cerr << "Failed to open file for saving loss history." << std::endl;
+        std::cerr << "Failed to open file for saving loss history. Path: " << file_path << std::endl;
+        std::cerr << "Check directory existence and write permissions." << std::endl;
+    }
+}
+
+void NeuralNetwork::train_distributed(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size, MPI_Comm comm) {
+    int world_size, rank;
+    MPI_Comm_size(comm, &world_size);
+    MPI_Comm_rank(comm, &rank);
+
+    // Divide the dataset among nodes
+    int num_samples = X.cols();
+    int local_batch_size = num_samples / world_size;
+
+    for (int epoch = 0; epoch < epochs; ++epoch) {
+        for (int i = 0; i < num_samples; i += batch_size) {
+            int batch_end = std::min(i + local_batch_size, num_samples);
+
+            Eigen::MatrixXd X_batch = X.middleCols(rank * local_batch_size, local_batch_size);
+            Eigen::MatrixXd Y_batch = Y.middleCols(rank * local_batch_size, local_batch_size);
+
+            Eigen::MatrixXd output = forward(X_batch);
+            backward(output, Y_batch);
+
+            // Average gradients across all nodes
+            for (const auto& layer : layers) {  // Use const auto& to access the unique_ptr
+                MPI_Allreduce(MPI_IN_PLACE, layer->get_grad_weights().data(), layer->get_grad_weights().size(), MPI_DOUBLE, MPI_SUM, comm);
+                MPI_Allreduce(MPI_IN_PLACE, layer->get_grad_bias().data(), layer->get_grad_bias().size(), MPI_DOUBLE, MPI_SUM, comm);
+            }
+
+            optimizer->update(layers);
+        }
+        if (rank == 0) {
+            Eigen::MatrixXd output = forward(X);
+            double loss = loss_function->calculate(output, Y);
+            std::cout << "Epoch " << epoch + 1 << " Loss: " << loss << std::endl;
+        }
     }
 }
 
