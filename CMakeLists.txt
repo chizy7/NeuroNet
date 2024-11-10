@@ -10,6 +10,11 @@ find_package(MPI REQUIRED)
 # Find CPPREST package
 find_package(cpprestsdk REQUIRED)
 
+# AWS
+find_package(AWSSDK REQUIRED COMPONENTS s3)
+include_directories(${AWSSDK_INCLUDE_DIRS})
+link_directories(${AWSSDK_LIBRARY_DIRS})
+
 # Specify the macOS SDK path for CMake
 if(APPLE)
     set(CMAKE_OSX_SYSROOT "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk")
@@ -35,14 +40,10 @@ set(SRC
 # Create executable
 add_executable(NeuroNet ${SRC})
 
-# Link MPI libraries
-target_link_libraries(NeuroNet PRIVATE ${MPI_LIBRARIES})
-
-# Specify the library path for cpprestsdk
-link_directories(/opt/homebrew/Cellar/cpprestsdk/2.10.19/lib)
-
-# Include the header files for cpprestsdk
-include_directories(/opt/homebrew/Cellar/cpprestsdk/2.10.19/include)
-
-# Use cpprestsdk's CMake alias
-target_link_libraries(NeuroNet PRIVATE cpprestsdk::cpprest)
+# Link libraries
+target_link_libraries(NeuroNet
+    PRIVATE
+    ${MPI_LIBRARIES}
+    cpprestsdk::cpprest
+    ${AWSSDK_LINK_LIBRARIES}
+)

@@ -3,6 +3,9 @@
 #include <cpprest/http_listener.h>
 #include <cpprest/json.h>
 
+// #include <thread>
+// #include <chrono>
+
 using namespace web;
 using namespace http;
 using namespace utility;
@@ -14,8 +17,11 @@ ModelServer::ModelServer(const std::string& model_path) {
 
 void ModelServer::start_server(int port) {
     http_listener listener(U("http://localhost:" + std::to_string(port)));
+    // http_listener listener(U("http://localhost:" + std::to_string(port) + "/predict"));
+    // http_listener listener(U("http://0.0.0.0:" + std::to_string(port)));
 
     listener.support(methods::POST, [this](http_request request) {
+        std::cout << "Received a request..." << std::endl;
         request.extract_json().then([this, &request](pplx::task<json::value> task) {
             try {
                 auto input_json = task.get();
@@ -25,15 +31,30 @@ void ModelServer::start_server(int port) {
 
                 // Convert output to JSON and send response
                 json::value response = eigen_to_json(output);
+                std::cout << "Sending response..." << std::endl;
                 request.reply(status_codes::OK, response);
             } catch (const std::exception& e) {
+                std::cerr << "Error processing request: " << e.what() << std::endl;
                 request.reply(status_codes::BadRequest, "Invalid JSON input");
             }
         });
     });
 
-    listener.open().wait();
-    std::cout << "Model server running on port " << port << std::endl;
+    try {
+        listener.open().wait();
+        std::cout << "Model server running on port " << port << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to start the server: " << e.what() << std::endl;
+    }
+    // listener.open().wait();
+    // std::cout << "Model server running on port " << port << std::endl;
+
+    // std::cout << "Press Ctrl+C to exit..." << std::endl;
+
+    // // Keep the server alive
+    // while (true) {
+    //     std::this_thread::sleep_for(std::chrono::hours(24));  // Keep the thread alive indefinitely
+    // }
 }
 
 Eigen::MatrixXd ModelServer::predict(const Eigen::MatrixXd& input) {

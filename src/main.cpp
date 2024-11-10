@@ -79,9 +79,6 @@ int main(int argc, char* argv[]) {
     }
 
     // Save the training loss history to a file
-    // Logger::info("Saving the training loss history...");
-    // nn.save_loss_history(models_dir + "../training_loss.csv");
-    // std::string loss_history_path = std::filesystem::path(models_dir) / "training_loss.csv";
     std::string loss_history_path = std::filesystem::absolute(std::filesystem::path(models_dir) / "training_loss.csv").string();
     std::cout << "Full path for loss history: " << loss_history_path << std::endl;
     Logger::info("Saving loss history to: " + loss_history_path);
