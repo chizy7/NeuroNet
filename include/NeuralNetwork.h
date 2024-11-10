@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory> 
 #include <Eigen/Dense>
+#include <mpi.h>
 #include "Layer.h"
 #include "Optimizer.h"
 #include "Loss.h"
@@ -10,6 +11,11 @@ class NeuralNetwork {
 public:
     NeuralNetwork();
     ~NeuralNetwork();  // Destructor for cleanup
+
+    std::vector<Layer*> dynamic_layers;
+    
+    void add_dynamic_layer(Layer* layer);
+    Eigen::MatrixXd forward_dynamic(const Eigen::MatrixXd& input);
 
     void add_layer(Layer* layer);
     Eigen::MatrixXd forward(const Eigen::MatrixXd& input);
@@ -28,6 +34,9 @@ public:
 
     // Loss history tracking
     void save_loss_history(const std::string& file_path);
+
+    // Distributed Training
+    void train_distributed(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size, MPI_Comm comm);
 
 private:
     std::vector<std::unique_ptr<Layer>> layers;  // Use smart pointers
