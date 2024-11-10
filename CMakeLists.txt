@@ -40,7 +40,7 @@ set(SRC
 # Create executable
 add_executable(NeuroNet ${SRC})
 
-# Link libraries (use only the keyword syntax for consistency)
+# Link libraries
 target_link_libraries(NeuroNet
     PRIVATE
     ${MPI_LIBRARIES}

@@ -41,6 +41,9 @@ public:
     // Federated Training
     void train_federated(const Eigen::MatrixXd& X_local, const Eigen::MatrixXd& Y_local, int epochs, int batch_size, MPI_Comm comm);
 
+    // Asynchronous training
+    void train_async(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size);
+
 private:
     std::vector<std::unique_ptr<Layer>> layers;  // Use smart pointers
     std::unique_ptr<Optimizer> optimizer;

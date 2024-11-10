@@ -6,6 +6,7 @@
 #include <numeric>
 #include <fstream>
 #include <thread>
+#include <future>
 
 NeuralNetwork::NeuralNetwork() : optimizer(nullptr), loss_function(nullptr) {}
 
@@ -94,30 +95,37 @@ void NeuralNetwork::train(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y, in
     }
 }
 
-// void NeuralNetwork::train_async(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size) {
-//     auto train_epoch = [this](const Eigen::MatrixXd& X_batch, const Eigen::MatrixXd& Y_batch, int batch_size) {
-//         Eigen::MatrixXd output = forward(X_batch);
-//         backward(output, Y_batch);
-//         optimizer->update(layers);
-//     };
+void NeuralNetwork::train_async(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size) {
+    // Define the lambda function for training a single batch
+    auto train_epoch = [this](const Eigen::MatrixXd& X_batch, const Eigen::MatrixXd& Y_batch) {
+        Eigen::MatrixXd output = this->forward(X_batch);
+        this->backward(output, Y_batch);
+        this->optimizer->update(this->layers);
+    };
 
-//     for (int epoch = 0; epoch < epochs; ++epoch) {
-//         std::vector<std::future<void>> futures;
-//         for (int i = 0; i < X.cols(); i += batch_size) {
-//             int end = std::min(i + batch_size, X.cols());
-//             Eigen::MatrixXd X_batch = X.middleCols(i, end - i);
-//             Eigen::MatrixXd Y_batch = Y.middleCols(i, end - i);
-//             futures.push_back(std::async(std::launch::async, train_epoch, X_batch, Y_batch, batch_size));
-//         }
+    for (int epoch = 0; epoch < epochs; ++epoch) {
+        std::vector<std::future<void>> futures;  // Declare futures vector
 
-//         for (auto& future : futures) {
-//             future.get();  // Wait for all batches to complete
-//         }
+        for (int i = 0; i < X.cols(); i += batch_size) {
+            int end = std::min(i + batch_size, static_cast<int>(X.cols()));
+            Eigen::MatrixXd X_batch = X.middleCols(i, end - i);
+            Eigen::MatrixXd Y_batch = Y.middleCols(i, end - i);
 
-//         Eigen::MatrixXd output = forward(X);
-//         std::cout << "Epoch " << epoch + 1 << " Loss: " << loss_function->calculate(output, Y) << std::endl;
-//     }
-// }
+            // Launch async tasks for batches
+            futures.push_back(std::async(std::launch::async, train_epoch, X_batch, Y_batch));
+        }
+
+        // Wait for all tasks to complete
+        for (auto& future : futures) {
+            future.get();
+        }
+
+        // Compute and log the epoch loss
+        Eigen::MatrixXd output = this->forward(X);  // Full forward pass for loss calculation
+        double loss = this->loss_function->calculate(output, Y);  // Compute epoch loss
+        std::cout << "Epoch " << epoch + 1 << " Loss: " << loss << std::endl;
+    }
+}
 
 void NeuralNetwork::save_model(const std::string& file_path) {
     // Ensure the directory exists before saving
@@ -207,31 +215,6 @@ void NeuralNetwork::train_distributed(const Eigen::MatrixXd& X, const Eigen::Mat
     }
 }
 
-// void NeuralNetwork::train_federated(const Eigen::MatrixXd& X_local, const Eigen::MatrixXd& Y_local, int epochs, int batch_size, MPI_Comm comm) {
-//     int world_size, rank;
-//     MPI_Comm_size(comm, &world_size);
-//     MPI_Comm_rank(comm, &rank);
-
-//     Eigen::MatrixXd global_weights = Eigen::MatrixXd::Zero(W1.rows(), W1.cols());
-//     Eigen::MatrixXd local_weights = W1;  // Each client holds its local model
-
-//     for (int epoch = 0; epoch < epochs; ++epoch) {
-//         Eigen::MatrixXd output = forward(X_local);
-//         backward(output, Y_local);
-
-//         // Aggregate local updates into global model
-//         MPI_Allreduce(local_weights.data(), global_weights.data(), local_weights.size(), MPI_DOUBLE, MPI_SUM, comm);
-
-//         if (rank == 0) {
-//             global_weights /= world_size;  // Average global weights
-//         }
-
-//         MPI_Bcast(global_weights.data(), global_weights.size(), MPI_DOUBLE, 0, comm);
-//         W1 = global_weights;
-
-//         std::cout << "Epoch " << epoch + 1 << " completed on client " << rank << std::endl;
-//     }
-// }
 void NeuralNetwork::train_federated(const Eigen::MatrixXd& X_local, const Eigen::MatrixXd& Y_local, int epochs, int batch_size, MPI_Comm comm) {
     int world_size, rank;
     MPI_Comm_size(comm, &world_size);
