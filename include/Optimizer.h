@@ -33,3 +33,15 @@ private:
     std::vector<Eigen::MatrixXd> v; // Second moment est
     int t; // Time step
 };
+
+class Lookahead : public Optimizer {
+public:
+    Lookahead(Optimizer* base_optimizer, double alpha = 0.5, int k = 5);
+    void update(const std::vector<std::unique_ptr<Layer>>& layers) override;
+
+private:
+    Optimizer* base_optimizer;
+    double alpha;
+    int k;
+    std::vector<Eigen::MatrixXd> slow_weights;
+};

@@ -24,35 +24,88 @@ double DenseLayer::get_regularization_loss() const {
     return l2_lambda * weights.squaredNorm();
 }
 
+// void DenseLayer::set_weights(const Eigen::MatrixXd& new_weights) {
+//     if (new_weights.rows() != weights.rows() || new_weights.cols() != weights.cols()) {
+//         throw std::invalid_argument("New weights dimensions do not match current weights dimensions");
+//     }
+//     std::cout << "Updating weights with new values of dimensions: " 
+//               << new_weights.rows() << "x" << new_weights.cols() << std::endl;
+//     weights = new_weights;
+// }
+
+Eigen::MatrixXd DenseLayer::get_weights() const {
+    return weights;  // Return the layer's weights
+}
+
+void DenseLayer::set_weights(const Eigen::MatrixXd& new_weights) {
+    weights = new_weights;  // Update the layer's weights
+}
+
 void DenseLayer::update_weights(const Eigen::MatrixXd& grad_weights_update, const Eigen::VectorXd& grad_bias_update) {
+    std::cout << "Updating weights and biases in DenseLayer" << std::endl;
     weights -= grad_weights_update + l2_lambda * weights;
     bias -= grad_bias_update;
 }
 
-void DenseLayer::save(std::ofstream& out) const {
-    if (out.is_open()) {
-        int rows = weights.rows(), cols = weights.cols();
-        out.write(reinterpret_cast<const char*>(&rows), sizeof(rows));
-        out.write(reinterpret_cast<const char*>(&cols), sizeof(cols));
-        out.write(reinterpret_cast<const char*>(weights.data()), sizeof(double) * rows * cols);
+// void DenseLayer::save(std::ofstream& out) const {
+//     if (out.is_open()) {
+//         int rows = weights.rows(), cols = weights.cols();
+//         out.write(reinterpret_cast<const char*>(&rows), sizeof(rows));
+//         out.write(reinterpret_cast<const char*>(&cols), sizeof(cols));
+//         out.write(reinterpret_cast<const char*>(weights.data()), sizeof(double) * rows * cols);
 
-        int bias_size = bias.size();
-        out.write(reinterpret_cast<const char*>(&bias_size), sizeof(bias_size));
-        out.write(reinterpret_cast<const char*>(bias.data()), sizeof(double) * bias_size);
+//         int bias_size = bias.size();
+//         out.write(reinterpret_cast<const char*>(&bias_size), sizeof(bias_size));
+//         out.write(reinterpret_cast<const char*>(bias.data()), sizeof(double) * bias_size);
+//     }
+// }
+
+// void DenseLayer::load(std::ifstream& in) {
+//     if (in.is_open()) {
+//         int rows, cols;
+//         in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+//         in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+//         weights.resize(rows, cols);
+//         in.read(reinterpret_cast<char*>(weights.data()), sizeof(double) * rows * cols);
+
+//         int bias_size;
+//         in.read(reinterpret_cast<char*>(&bias_size), sizeof(bias_size));
+//         bias.resize(bias_size);
+//         in.read(reinterpret_cast<char*>(bias.data()), sizeof(double) * bias_size);
+//     }
+// }
+
+void DenseLayer::save(std::ofstream& out) const {
+    if (!out.is_open()) {
+        throw std::ios_base::failure("Failed to open file for saving");
     }
+    std::cout << "Saving layer weights of dimensions: " << weights.rows() << "x" << weights.cols() << std::endl;
+
+    int rows = weights.rows(), cols = weights.cols();
+    out.write(reinterpret_cast<const char*>(&rows), sizeof(rows));
+    out.write(reinterpret_cast<const char*>(&cols), sizeof(cols));
+    out.write(reinterpret_cast<const char*>(weights.data()), sizeof(double) * rows * cols);
+
+    int bias_size = bias.size();
+    out.write(reinterpret_cast<const char*>(&bias_size), sizeof(bias_size));
+    out.write(reinterpret_cast<const char*>(bias.data()), sizeof(double) * bias_size);
 }
 
 void DenseLayer::load(std::ifstream& in) {
-    if (in.is_open()) {
-        int rows, cols;
-        in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
-        in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
-        weights.resize(rows, cols);
-        in.read(reinterpret_cast<char*>(weights.data()), sizeof(double) * rows * cols);
-
-        int bias_size;
-        in.read(reinterpret_cast<char*>(&bias_size), sizeof(bias_size));
-        bias.resize(bias_size);
-        in.read(reinterpret_cast<char*>(bias.data()), sizeof(double) * bias_size);
+    if (!in.is_open()) {
+        throw std::ios_base::failure("Failed to open file for loading");
     }
+
+    int rows, cols;
+    in.read(reinterpret_cast<char*>(&rows), sizeof(rows));
+    in.read(reinterpret_cast<char*>(&cols), sizeof(cols));
+    weights.resize(rows, cols);
+    in.read(reinterpret_cast<char*>(weights.data()), sizeof(double) * rows * cols);
+
+    int bias_size;
+    in.read(reinterpret_cast<char*>(&bias_size), sizeof(bias_size));
+    bias.resize(bias_size);
+    in.read(reinterpret_cast<char*>(bias.data()), sizeof(double) * bias_size);
+
+    std::cout << "Loaded layer weights of dimensions: " << weights.rows() << "x" << weights.cols() << std::endl;
 }

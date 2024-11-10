@@ -54,3 +54,26 @@ void Adam::update(const std::vector<std::unique_ptr<Layer>>& layers) {
         layer->update_weights(weight_update, bias_update);
     }
 }
+
+Lookahead::Lookahead(Optimizer* base_optimizer, double alpha, int k)
+    : base_optimizer(base_optimizer), alpha(alpha), k(k) {}
+
+void Lookahead::update(const std::vector<std::unique_ptr<Layer>>& layers) {
+    if (slow_weights.empty()) {
+        for (const auto& layer : layers) {
+            slow_weights.push_back(layer->get_weights()); // Access layer through unique_ptr
+        }
+    }
+
+    base_optimizer->update(layers);
+
+    if (--k == 0) {
+        for (size_t i = 0; i < layers.size(); ++i) {
+            Eigen::MatrixXd fast_weights = layers[i]->get_weights(); // Dereference unique_ptr
+            Eigen::MatrixXd new_weights = slow_weights[i] + alpha * (fast_weights - slow_weights[i]);
+            layers[i]->set_weights(new_weights); // Dereference unique_ptr
+            slow_weights[i] = new_weights;
+        }
+        k = 5;  // Reset step counter
+    }
+}

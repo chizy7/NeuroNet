@@ -94,6 +94,31 @@ void NeuralNetwork::train(const Eigen::MatrixXd& X, const Eigen::VectorXi& Y, in
     }
 }
 
+// void NeuralNetwork::train_async(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int epochs, int batch_size) {
+//     auto train_epoch = [this](const Eigen::MatrixXd& X_batch, const Eigen::MatrixXd& Y_batch, int batch_size) {
+//         Eigen::MatrixXd output = forward(X_batch);
+//         backward(output, Y_batch);
+//         optimizer->update(layers);
+//     };
+
+//     for (int epoch = 0; epoch < epochs; ++epoch) {
+//         std::vector<std::future<void>> futures;
+//         for (int i = 0; i < X.cols(); i += batch_size) {
+//             int end = std::min(i + batch_size, X.cols());
+//             Eigen::MatrixXd X_batch = X.middleCols(i, end - i);
+//             Eigen::MatrixXd Y_batch = Y.middleCols(i, end - i);
+//             futures.push_back(std::async(std::launch::async, train_epoch, X_batch, Y_batch, batch_size));
+//         }
+
+//         for (auto& future : futures) {
+//             future.get();  // Wait for all batches to complete
+//         }
+
+//         Eigen::MatrixXd output = forward(X);
+//         std::cout << "Epoch " << epoch + 1 << " Loss: " << loss_function->calculate(output, Y) << std::endl;
+//     }
+// }
+
 void NeuralNetwork::save_model(const std::string& file_path) {
     // Ensure the directory exists before saving
     std::filesystem::path directory = std::filesystem::path(file_path).parent_path();
@@ -179,6 +204,67 @@ void NeuralNetwork::train_distributed(const Eigen::MatrixXd& X, const Eigen::Mat
             double loss = loss_function->calculate(output, Y);
             std::cout << "Epoch " << epoch + 1 << " Loss: " << loss << std::endl;
         }
+    }
+}
+
+// void NeuralNetwork::train_federated(const Eigen::MatrixXd& X_local, const Eigen::MatrixXd& Y_local, int epochs, int batch_size, MPI_Comm comm) {
+//     int world_size, rank;
+//     MPI_Comm_size(comm, &world_size);
+//     MPI_Comm_rank(comm, &rank);
+
+//     Eigen::MatrixXd global_weights = Eigen::MatrixXd::Zero(W1.rows(), W1.cols());
+//     Eigen::MatrixXd local_weights = W1;  // Each client holds its local model
+
+//     for (int epoch = 0; epoch < epochs; ++epoch) {
+//         Eigen::MatrixXd output = forward(X_local);
+//         backward(output, Y_local);
+
+//         // Aggregate local updates into global model
+//         MPI_Allreduce(local_weights.data(), global_weights.data(), local_weights.size(), MPI_DOUBLE, MPI_SUM, comm);
+
+//         if (rank == 0) {
+//             global_weights /= world_size;  // Average global weights
+//         }
+
+//         MPI_Bcast(global_weights.data(), global_weights.size(), MPI_DOUBLE, 0, comm);
+//         W1 = global_weights;
+
+//         std::cout << "Epoch " << epoch + 1 << " completed on client " << rank << std::endl;
+//     }
+// }
+void NeuralNetwork::train_federated(const Eigen::MatrixXd& X_local, const Eigen::MatrixXd& Y_local, int epochs, int batch_size, MPI_Comm comm) {
+    int world_size, rank;
+    MPI_Comm_size(comm, &world_size);
+    MPI_Comm_rank(comm, &rank);
+
+    std::vector<Eigen::MatrixXd> global_weights;
+    std::vector<Eigen::MatrixXd> local_weights;
+
+    // Initialize global and local weights for all layers
+    for (const auto& layer : layers) {
+        global_weights.push_back(Eigen::MatrixXd::Zero(layer->get_weights().rows(), layer->get_weights().cols()));
+        local_weights.push_back(layer->get_weights());
+    }
+
+    for (int epoch = 0; epoch < epochs; ++epoch) {
+        Eigen::MatrixXd output = forward(X_local);
+        backward(output, Y_local);
+
+        // Aggregate local updates into global model
+        for (size_t i = 0; i < layers.size(); ++i) {
+            MPI_Allreduce(local_weights[i].data(), global_weights[i].data(), local_weights[i].size(), MPI_DOUBLE, MPI_SUM, comm);
+
+            if (rank == 0) {
+                global_weights[i] /= world_size;  // Average global weights
+            }
+
+            MPI_Bcast(global_weights[i].data(), global_weights[i].size(), MPI_DOUBLE, 0, comm);
+
+            // Update local model weights with global weights
+            layers[i]->set_weights(global_weights[i]);
+        }
+
+        std::cout << "Epoch " << epoch + 1 << " completed on client " << rank << std::endl;
     }
 }
 

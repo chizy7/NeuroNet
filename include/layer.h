@@ -10,6 +10,11 @@ public:
     virtual Eigen::MatrixXd backward(const Eigen::MatrixXd& grad_output) = 0;
     virtual void update_weights(const Eigen::MatrixXd& grad_weights_update, const Eigen::VectorXd& grad_bias_update) = 0;
 
+    virtual Eigen::MatrixXd get_weights() const = 0;
+    // Eigen::MatrixXd get_weights() const override;
+    virtual void set_weights(const Eigen::MatrixXd& new_weights) = 0;
+    // void set_weights(const Eigen::MatrixXd& new_weights) override;
+
     virtual Eigen::MatrixXd get_grad_weights() const = 0; // Added for optimizer
     virtual Eigen::VectorXd get_grad_bias() const = 0;    // Added for optimizer
 
@@ -28,6 +33,10 @@ public:
 
     Eigen::MatrixXd get_grad_weights() const override { return grad_weights; }
     Eigen::VectorXd get_grad_bias() const override { return grad_bias; }
+
+    // void set_weights(const Eigen::MatrixXd& new_weights) override;
+    Eigen::MatrixXd get_weights() const override;
+    void set_weights(const Eigen::MatrixXd& new_weights) override;
 
     void set_l2_lambda(double lambda) { l2_lambda = lambda; }
     double get_regularization_loss() const;
