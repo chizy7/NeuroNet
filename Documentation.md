@@ -10,12 +10,13 @@ NeuroNet is a comprehensive neural network implementation in C++ leveraging the 
 4. [Architecture](#architecture)
 5. [Components](#components)
 6. [Usage Examples](#usage-examples)
-7. [Advanced Features](#advanced-features)
-8. [Performance Monitoring](#performance-monitoring)
-9. [Model Management](#model-management)
-10. [Debugging](#debugging)
-11. [Known Issues and Future Improvements](#known-issues-and-future-improvements)
-12. [License](#license)
+7. [Testing](#testing)
+8. [Advanced Features](#advanced-features)
+9. [Performance Monitoring](#performance-monitoring)
+10. [Model Management](#model-management)
+11. [Debugging](#debugging)
+12. [Known Issues and Future Improvements](#known-issues-and-future-improvements)
+13. [License](#license)
 
 ## Features
 
@@ -35,6 +36,10 @@ NeuroNet is a comprehensive neural network implementation in C++ leveraging the 
   - Distributed training using MPI
   - Federated learning capabilities
   - Asynchronous training with multi-threading
+- **Testing Framework**:
+  - Unit tests for individual components
+  - Integration tests for component interactions
+  - System tests for end-to-end validation
 - **Model Management**:
   - Save and load model weights
   - Model versioning system
@@ -62,6 +67,7 @@ NeuroNet relies on the following libraries:
 - **cpprestsdk**: For model serving via HTTP
 - **AWS SDK for C++**: For cloud storage integration
 - **OpenCV**: For image processing in multi-modal data loading
+- **Google Test**: For running the test suite
 
 ### Building from Source
 
@@ -73,7 +79,7 @@ NeuroNet relies on the following libraries:
 
 2. Ensure all dependencies are installed. On Ubuntu/Debian:
    ```bash
-   sudo apt-get install libeigen3-dev libopenmpi-dev libcpprest-dev libaws-sdk-cpp-all-dev libopencv-dev
+   sudo apt-get install libeigen3-dev libopenmpi-dev libcpprest-dev libaws-sdk-cpp-all-dev libopencv-dev libgtest-dev
    ```
 
 3. Create build directory and compile:
@@ -118,12 +124,23 @@ A fully connected layer implementing forward and backward propagation with L2 re
 DenseLayer layer(input_size, output_size, l2_lambda);
 ```
 
+The DenseLayer performs the following operations:
+- **Forward pass**: `output = input * weights.transpose() + bias`
+- **Backward pass**: Computes gradients for weights and propagates gradients to previous layers
+- **L2 Regularization**: Applies weight decay proportional to the L2 norm of weights
+
 #### LSTM Layer
 Long Short-Term Memory layer for sequence modeling.
 
 ```cpp
 LSTM lstm(input_size, hidden_size, output_size);
 ```
+
+The LSTM implementation provides:
+- Gates: forget, input, cell, and output gates
+- State management: hidden state and cell state
+- Forward pass implementation
+- Note: The current implementation is simplified for demonstration purposes
 
 ### Optimizers
 
@@ -267,6 +284,90 @@ std::vector<int> layer_options = {64, 128, 256};
 nas.search(X, Y, layer_options, 5, 64); // 5 epochs, batch size 64
 ```
 
+## Testing
+
+NeuroNet includes a comprehensive testing framework to ensure code quality and reliability. The testing suite is built using Google Test and is organized into three categories:
+
+### Test Structure
+
+1. **Unit Tests**: Test individual components in isolation
+   - DenseLayer tests for forward and backward propagation
+   - Optimizer tests for weight updates
+   - Loss function tests for calculation and gradients
+
+2. **Integration Tests**: Test interactions between components
+   - NeuralNetwork tests for training and evaluation
+   - Model saving and loading tests
+   - Forward and backward pass through multiple layers
+
+3. **System Tests**: Test end-to-end workflows
+   - Full training and evaluation pipeline
+   - Model persistence and restoration
+   - Performance on synthetic datasets
+
+### Running Tests
+
+The tests can be run using the provided script:
+
+```bash
+./run_tests.sh
+```
+
+This script will:
+1. Configure the environment for testing
+2. Build the project with test targets
+3. Run all test categories
+4. Report test results
+
+For macOS users, the script includes special handling for Apple Silicon (M1/M2/M3) and proper SDK path detection.
+
+### Writing New Tests
+
+To add a new test, follow these steps:
+
+1. Create a new test file in the appropriate directory (unit, integration, or system)
+2. Include the necessary headers and Google Test framework:
+   ```cpp
+   #include "gtest/gtest.h"
+   #include "ComponentToTest.h"
+   ```
+3. Write test cases using the `TEST` or `TEST_F` macros:
+   ```cpp
+   TEST(ComponentNameTest, FunctionalityName) {
+       // Test setup
+       // Actions
+       // Assertions using EXPECT_* or ASSERT_*
+   }
+   ```
+4. Add the new test file to CMakeLists.txt in the appropriate executable target
+
+Example of a simple unit test:
+
+```cpp
+#include "gtest/gtest.h"
+#include "Layer.h"
+
+TEST(DenseLayerTest, ForwardPassDimensions) {
+    DenseLayer layer(10, 5);  // 10 inputs, 5 outputs
+    Eigen::MatrixXd input = Eigen::MatrixXd::Random(2, 10);  // Batch of 2 samples
+    
+    Eigen::MatrixXd output = layer.forward(input);
+    
+    // Check output dimensions
+    EXPECT_EQ(output.rows(), 2);  // Same number of samples
+    EXPECT_EQ(output.cols(), 5);  // Correct output dimension
+}
+```
+
+### Test Troubleshooting
+
+If you encounter issues with tests:
+
+1. Check for dependency conflicts (especially with Google Test)
+2. Ensure proper include paths in your test files
+3. Verify that the debug variable is properly defined
+4. For macOS users, make sure the correct SDK path is being used
+
 ## Advanced Features
 
 ### Model Serving
@@ -360,6 +461,7 @@ To enable debug mode when running the application:
 - **Quantization**: Support for model quantization for deployment on edge devices
 - **AutoML**: Extend NAS capabilities with more sophisticated search algorithms
 - **Reinforcement Learning**: Add support for RL algorithms and environments
+- **macOS Build Issues**: Some users may encounter SDK path and library linking issues on macOS
 
 ## License
 
