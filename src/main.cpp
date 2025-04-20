@@ -8,7 +8,7 @@
 #include "Logger.h"
 #include <Eigen/Dense>
 
-bool debug = false; // debug flag
+#include "GlobalFlags.h" 
 
 int main(int argc, char* argv[]) {
     // Enable debug mode if "--debug" is passed as an argument
